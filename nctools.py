@@ -47,35 +47,6 @@ def notify_time(bot, trigger):
         bot.say('It is ' + sopel.formatting.color('DAY', fg='BLACK', bg='YELLOW') + ' and ' + time.strftime('%H:%M', time.gmtime()) + ' in the Nexus')
 
 
-@sopel.module.commands('setraid')
-@sopel.module.example('!setraid 20 01 16 02 30', 'Raid time set to 20 Jan 02:30 which is in 14 hours and 13 minutes')
-def raid_set(bot, trigger):
-    """Sets the raid time in DD MM YY HH MM format."""
-    try:
-        rawnewraidtime = trigger.group(2).rstrip(' ')
-        newraidtime = time.strptime(rawnewraidtime, '%d %m %y %H %M')
-    except:
-        bot.say('Usage: !setraid DD MM YY HH MM')
-        return
-    timediffinhours = (calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) / 60 / 60
-    remaindermins = ((calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) / 60) % 60
-
-    if (calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) < 0:
-        bot.say('You can\'t raid in the past!')
-        return
-
-    bot.db.set_channel_value(trigger.sender, 'raidtime', calendar.timegm(newraidtime))
-    bot.say(
-            'Raid time set to '
-            + time.strftime('%d %b %H:%M', newraidtime)
-            + ' which is in '
-            + str(timediffinhours)
-            + ' hours and '
-            + str(remaindermins)
-            + ' minutes'
-            )
-
-
 @sopel.module.commands('char')
 @sopel.module.example('!char Ygritte', 'NAME: Ygritte - LVL: 19 - CLASS: Sorcerer - STATUS: alive - FACTION: Oblivion Squadron http://www.nexusclash.com/modules.php?name=Game&op=character&id=8104')
 def get_char(bot, trigger):
@@ -105,28 +76,130 @@ def get_char(bot, trigger):
         bot.say('Not found. Are you sure the name is correct?')
 
 
-@sopel.module.commands('whenraid')
-@sopel.module.example('!whenraid', 'Next raid is at 20 Jan 02:30 which is in 12 hours and 31 minutes')
-def raid_when(bot, trigger):
-    """Returns the time raid was set using !setraid"""
-    raidtimeseconds = bot.db.get_channel_value(trigger.sender, 'raidtime')
-    if raidtimeseconds != None:
-        raidtime = time.gmtime(raidtimeseconds)
-    else:
-        bot.say('No raid time set')
+@sopel.module.commands('setraid')
+@sopel.module.example('!setraid 20 01 16 02 30', 'Raid time set to 20 Jan 02:30 which is in 14 hours and 13 minutes')
+def raid_set(bot, trigger):
+    """Sets the raid time in DD MM YY HH MM format."""
+    try:
+        rawnewraidtime = trigger.group(2).rstrip(' ')
+        newraidtime = time.strptime(rawnewraidtime, '%d %m %y %H %M')
+    except:
+        bot.say('Usage: !setraid DD MM YY HH MM')
+        return
+    timediffinhours = (calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) / 60 / 60
+    remaindermins = ((calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) / 60) % 60
+
+    if (calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) < 0:
+        bot.say('You can\'t raid in the past!')
         return
 
-    timediffinhours = (raidtimeseconds - calendar.timegm(time.gmtime())) / 60 / 60
-    remaindermins = ((raidtimeseconds - calendar.timegm(time.gmtime())) / 60) % 60
+    bot.db.set_channel_value(trigger.sender, 'raidtime', calendar.timegm(newraidtime))
     bot.say(
-            'Next raid is at '
-            + time.strftime('%d %b %H:%M', raidtime)
+            'Raid time set to '
+            + time.strftime('%d %b %H:%M', newraidtime)
             + ' which is in '
             + str(timediffinhours)
             + ' hours and '
             + str(remaindermins)
             + ' minutes'
             )
+
+
+@sopel.module.commands('setteamraid')
+@sopel.module.example('!setteamraid 20 01 16 02 30 wolf', 'Raid time for team "wolf" set to 20 Jan 02:30 which is in 14 hours and 13 minutes')
+def raid_setteam(bot, trigger):
+    """Sets the raid time in <team> DD MM YY HH MM format."""
+    raidteams = bot.db.get_channel_value(trigger.sender, 'raidteams')
+    if not raidteams:
+        bot.say('No teams registered. Use !raidteam command to register a team first. ')
+        return
+    raidteam = trigger.group(2).split(' ')[0]
+    if raidteam not in raidteams.keys():
+        bot.say('That team does not exit. Usage: !setteamraid team DD MM YY HH MM')
+        return
+
+    try:
+        rawnewraidtime = trigger.group(2).rstrip(' ')[len(raidteam) + 1:]
+        newraidtime = time.strptime(rawnewraidtime, '%d %m %y %H %M')
+    except:
+        bot.say('Usage: !setteamraid team DD MM YY HH MM')
+        return
+    timediffinhours = (calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) / 60 / 60
+    remaindermins = ((calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) / 60) % 60
+
+    if (calendar.timegm(newraidtime) - calendar.timegm(time.gmtime())) < 0:
+        bot.say('You can\'t raid in the past!')
+        return
+    raidteams[raidteam] = calendar.timegm(newraidtime)
+    bot.db.set_channel_value(trigger.sender, 'raidteams', raidteams)
+    bot.say(
+            'Raid time for team '
+            + raidteam
+            + ' set to '
+            + time.strftime('%d %b %H:%M', newraidtime)
+            + ' which is in '
+            + str(timediffinhours)
+            + ' hours and '
+            + str(remaindermins)
+            + ' minutes'
+            )
+
+
+@sopel.module.commands('whenraid')
+@sopel.module.example('!whenraid', 'Next raid is at 20 Jan 02:30 which is in 12 hours and 31 minutes')
+def raid_when(bot, trigger):
+    """Returns the time raid was set using !setraid"""
+    raidteams = bot.db.get_channel_value(trigger.sender, 'raidteams')
+    if not raidteams:
+        raidteams = {}
+    raidtimeseconds = bot.db.get_channel_value(trigger.sender, 'raidtime')
+    if raidtimeseconds != None:
+        raidtime = time.gmtime(raidtimeseconds)
+        timediffinhours = (raidtimeseconds - calendar.timegm(time.gmtime())) / 60 / 60
+        remaindermins = ((raidtimeseconds - calendar.timegm(time.gmtime())) / 60) % 60
+        bot.say(
+                'Next primary raid is at '
+                + time.strftime('%d %b %H:%M', raidtime)
+                + ' which is in '
+                + str(timediffinhours)
+                + ' hours and '
+                + str(remaindermins)
+                + ' minutes'
+                )
+
+    for team in raidteams.keys():
+        raidtimeseconds = raidteams[team]
+        if raidtimeseconds != 0:
+            if raidtimeseconds - calendar.timegm(time.gmtime()) < 0:
+                continue
+            timediffinhours = (raidtimeseconds - calendar.timegm(time.gmtime())) / 60 / 60
+            remaindermins = ((raidtimeseconds - calendar.timegm(time.gmtime())) / 60) % 60
+            bot.say(
+                    'Next team \''
+                    + team
+                    + '\' raid is at '
+                    + time.strftime('%d %b %H:%M', raidtime)
+                    + ' which is in '
+                    + str(timediffinhours)
+                    + ' hours and '
+                    + str(remaindermins)
+                    + ' minutes'
+            )
+
+
+@sopel.module.commands('raidteam')
+@sopel.module.example('!raidteam wolfpack', )
+def raid_team(bot, trigger):
+    """Creates a raid team in the channel"""
+    if trigger.group(2) == None:
+        bot.say('Usage: !raidteam <team name>')
+        return
+    raidteams = bot.db.get_channel_value(trigger.sender, 'raidteams')
+    if not raidteams:
+        raidteams = {}
+    raidteams[trigger.group(2).rstrip(' ')] = 0
+
+    bot.db.set_channel_value(trigger.sender, 'raidteams', raidteams)
 
 
 @sopel.module.thread(False)
