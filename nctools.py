@@ -172,6 +172,7 @@ def raid_when(bot, trigger):
         if raidtimeseconds != 0:
             if raidtimeseconds - calendar.timegm(time.gmtime()) < 0:
                 continue
+            raidtime = time.gmtime(raidtimeseconds)
             timediffinhours = (raidtimeseconds - calendar.timegm(time.gmtime())) / 60 / 60
             remaindermins = ((raidtimeseconds - calendar.timegm(time.gmtime())) / 60) % 60
             bot.say(
